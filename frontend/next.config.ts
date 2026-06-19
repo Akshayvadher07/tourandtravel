@@ -2,8 +2,6 @@ import path from "path";
  import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
- // Parent folder may have its own package-lock.json; Turbopack must treat this
- // directory as the app root
  turbopack: {
  root: path.join(__dirname),
  },
@@ -16,15 +14,6 @@ const nextConfig: NextConfig = {
  pathname: '/uploads/**',
  },
  ],
- },
- async redirects() {
- return [
- {
- source: '/',
- destination: '/site',
- permanent: false,
- },
- ]
  },
  };
 
