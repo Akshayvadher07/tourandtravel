@@ -1,15 +1,16 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const path = require("path");
 const { connectDB } = require("./config/db");
 const tourRoutes = require("./routes/tourRoutes");
 const destinationRoutes = require("./routes/destinationRoutes");
 const travelPlanRoutes = require("./routes/travelPlanRoutes");
+const uploadRouter = require("./routes/upload");
 const { sendError } = require("./utils/apiResponse");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
+
 const clientOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
   .split(",")
   .map((o) => o.trim())
@@ -33,19 +34,35 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
+app.use(express.json());
+
+// ── Routes ──────────────────────────────────────────────
 app.use("/api/tours", tourRoutes);
 app.use("/api/destinations", destinationRoutes);
 app.use("/api/travel-plans", travelPlanRoutes);
+app.use("/api/upload", uploadRouter);
 
+app.get("/health", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "tourandtravel-backend",
+    port: PORT,
+  });
+});
+
+// ── 404 catch-all (must be last) ────────────────────────
 app.use((req, res) => {
   sendError(res, 404, "NOT_FOUND", "No handler for this path.", {
     method: req.method,
     path: req.originalUrl,
   });
 });
+
+function isConnectionRefused(err) {
+  const s = `${err?.message || ""}${err?.cause?.message || ""}`;
+  return s.includes("ECONNREFUSED");
+}
 
 async function start() {
   try {
@@ -55,19 +72,16 @@ async function start() {
     if (isConnectionRefused(err)) {
       console.error("\n--- MongoDB: connection refused ---");
       console.error("Nothing is accepting TCP on the host:port in MONGODB_URI.");
-      console.error("Fix one of:");
-      console.error("  • MongoDB is running on that machine (service / mongod started).");
-      console.error("  • If DB is on THIS PC, use mongodb://127.0.0.1:27017/... (not a LAN IP).");
-      console.error("  • On the DB server: bindIp in mongod.cfg includes 0.0.0.0 or that IP.");
-      console.error("  • Firewall allows inbound TCP 27017 on the DB host.\n");
     } else {
       console.error("MongoDB connection error:", err.message || err);
     }
     console.error("API will still start; /api/tours returns 503 until the database is reachable.\n");
   }
+
   const server = app.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
   });
+
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
       console.error(`\nPort ${PORT} is already in use. Stop the other process or set PORT in backend/.env to a free port.\n`);
@@ -76,11 +90,6 @@ async function start() {
     }
     process.exit(1);
   });
-}
-
-function isConnectionRefused(err) {
-  const s = `${err?.message || ""}${err?.cause?.message || ""}`;
-  return s.includes("ECONNREFUSED");
 }
 
 start().catch((err) => {
