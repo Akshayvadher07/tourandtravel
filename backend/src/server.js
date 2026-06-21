@@ -5,7 +5,6 @@ const { connectDB } = require("./config/db");
 const tourRoutes = require("./routes/tourRoutes");
 const destinationRoutes = require("./routes/destinationRoutes");
 const travelPlanRoutes = require("./routes/travelPlanRoutes");
-const uploadRouter = require("./routes/upload");
 const { sendError } = require("./utils/apiResponse");
 
 const app = express();
@@ -41,12 +40,11 @@ app.use(express.json());
 app.use("/api/tours", tourRoutes);
 app.use("/api/destinations", destinationRoutes);
 app.use("/api/travel-plans", travelPlanRoutes);
-app.use("/api/upload", uploadRouter);
 
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
-    service: "tourandtravel-backend",
+    service: "tourandtravel-user-backend",
     port: PORT,
   });
 });
